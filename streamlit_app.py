@@ -1,74 +1,69 @@
-import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+import streamlit as st
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
 
-# Function to create the DataFrame
-def create_dataframe():
-    data = {
-        'interest_level': [],
-        'mutual_friends': [],
-        'humor_compatibility': [],
-        'common_hobbies': [],
-        'communication_freq': [],
-        'shared_special_moment': [],
-        'will_fall': []
-    }
-    return pd.DataFrame(data)
+# Sample data preparation
+data = {
+    'interest_level': [8.5, 6.2, 9.0, 5.5, 7.8, 6.5, 8.0, 7.2, 6.8, 9.5, 5.0, 8.7, 7.9, 6.1, 8.3],
+    'mutual_friends': [1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1],
+    'humor_compatibility': [7.5, 5.0, 9.0, 6.0, 7.8, 5.5, 8.0, 7.0, 6.5, 9.5, 4.0, 8.5, 7.0, 5.5, 8.0],
+    'common_hobbies': [2, 0, 3, 1, 0, 1, 2, 2, 0, 3, 1, 2, 1, 0, 3],
+    'communication_freq': [4.0, 2.5, 5.0, 3.0, 2.0, 1.5, 4.0, 3.5, 1.0, 5.0, 2.0, 4.5, 3.5, 1.0, 5.0],
+    'shared_special_moment': [1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1],
+    'will_fall': [1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1]
+}
 
-# Create a DataFrame
-df = create_dataframe()
+df = pd.DataFrame(data)
 
-# User input
-st.title("Your Crush Probability Calculator")
-interest_level = st.number_input("On a scale of 1 to 10, how much are you interested in your crush?", min_value=1.0, max_value=10.0, step=0.1)
-mutual_friends = st.number_input("How many mutual friends do you have?", min_value=0.0, step=1.0)
-humor_compatibility = st.number_input("On a scale of 1 to 10, how compatible are you in humor?", min_value=1.0, max_value=10.0, step=0.1)
-common_hobbies = st.selectbox("Do you have common hobbies? (0 = No, 1 = Yes)", [0, 1])
-communication_freq = st.number_input("On a scale of 1 to 10, how often do you communicate?", min_value=1.0, max_value=10.0, step=0.1)
-shared_special_moment = st.number_input("On a scale of 1 to 10, how special is your moment together?", min_value=1.0, max_value=10.0, step=0.1)
-
-# Append user data to DataFrame
-df = df.append({
-    'interest_level': interest_level,
-    'mutual_friends': mutual_friends,
-    'humor_compatibility': humor_compatibility,
-    'common_hobbies': common_hobbies,
-    'communication_freq': communication_freq,
-    'shared_special_moment': shared_special_moment,
-    'will_fall': None  # Placeholder for prediction
-}, ignore_index=True)
-
-# Feature Matrix and Target Vector
+# Define features and target variable
 X = df[['interest_level', 'mutual_friends', 'humor_compatibility', 'common_hobbies', 'communication_freq', 'shared_special_moment']]
-y = df['will_fall'].fillna(0)  # Assuming 0 initially for predictions
+y = df['will_fall']
 
-# Scale the features
+# Scaling and model
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
-# Train the model
 model = LogisticRegression()
 model.fit(X_scaled, y)
 
-# Predict probability
-probability = model.predict_proba(X_scaled[-1].reshape(1, -1))[0][1]
-st.write(f"Probability your crush will fall for you: {probability * 100:.2f}%")
+st.title("Will Your Crush Fall for You?")
 
-# Plotting
-plt.figure(figsize=(12, 6))
+# User input for each feature
+interest_level = st.slider("Rate your interest level in conversations (0.0 - 10.0)", 0.0, 10.0, 5.0)
+mutual_friends = st.selectbox("Do you have mutual friends?", [1, 0])
+humor_compatibility = st.slider("Rate your humor compatibility (0.0 - 10.0)", 0.0, 10.0, 5.0)
+common_hobbies = st.number_input("How many common hobbies do you have?", min_value=0, max_value=2, value=1)
+communication_freq = st.slider("How often do you chat per week (0.0 - 10.0)", 0.0, 10.0, 5.0)
+shared_special_moment = st.selectbox("Have you shared any special moments?", [1, 0])
+
+# Creating the user data input DataFrame
+user_data = pd.DataFrame({
+    'interest_level': [interest_level],
+    'mutual_friends': [mutual_friends],
+    'humor_compatibility': [humor_compatibility],
+    'common_hobbies': [common_hobbies],
+    'communication_freq': [communication_freq],
+    'shared_special_moment': [shared_special_moment]
+})
+
+# Scale user data
+user_data_scaled = scaler.transform(user_data)
+probability = model.predict_proba(user_data_scaled)[:, 1][0] * 100
+
+st.write(f"**Probability your crush will fall for you: {probability:.2f}%**")
+
+# Bar plot
 features = ['interest_level', 'mutual_friends', 'humor_compatibility', 'common_hobbies', 'communication_freq', 'shared_special_moment']
-values = df.iloc[-1][features]
+user_values = user_data.values.flatten()
 
-# Bar plot for probabilities
-plt.bar(features, values, color='skyblue')
-plt.axhline(y=probability, color='red', linestyle='--', label='Your Probability')
-plt.xticks(rotation=45, fontsize=12)
-plt.yticks(fontsize=12)
-plt.xlabel("Features", fontsize=14)
-plt.ylabel("Values", fontsize=14)
-plt.title("Crush Probability Features", fontsize=16)
+fig, ax = plt.subplots()
+ax.bar(features, user_values, color='lightblue')
+ax.axhline(y=probability / 100, color='red', linestyle='--', label='Probability')
+plt.xlabel("Features")
+plt.ylabel("Values")
+plt.title("Your Crush Prediction Analysis")
 plt.legend()
-st.pyplot(plt)
+st.pyplot(fig)
